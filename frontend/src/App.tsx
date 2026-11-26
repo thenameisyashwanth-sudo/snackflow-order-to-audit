@@ -7,6 +7,10 @@ import InventoryStockPage from './pages/InventoryStockPage';
 import ProductionRunsPage from './pages/ProductionRunsPage';
 import PurchasesPage from './pages/PurchasesPage';
 import { ForbiddenView, RoleModuleView } from './pages/RoleModuleView';
+import SalesmanCatalogPage from './pages/SalesmanCatalogPage';
+import SalesmanOrderPage from './pages/SalesmanOrderPage';
+import SalesmanOrdersListPage from './pages/SalesmanOrdersListPage';
+import SalesmanVisitsPage from './pages/SalesmanVisitsPage';
 
 function AppRoutes() {
   const { user, isLoading } = useAuth();
@@ -43,6 +47,14 @@ function AppRoutes() {
             element = <PurchasesPage />;
           } else if (item.id === 'inventory') {
             element = <InventoryStockPage />;
+          } else if (item.id === 'field-order') {
+            element = <SalesmanOrderPage />;
+          } else if (item.id === 'my-orders') {
+            element = <SalesmanOrdersListPage />;
+          } else if (item.id === 'catalog') {
+            element = <SalesmanCatalogPage />;
+          } else if (item.id === 'visit-log') {
+            element = <SalesmanVisitsPage />;
           }
 
           return (

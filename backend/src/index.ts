@@ -8,6 +8,7 @@ import adminRoutes from './routes/admin.routes.js';
 import authRoutes from './routes/auth.routes.js';
 import inventoryRoutes from './routes/inventory.routes.js';
 import mastersRoutes from './routes/masters.routes.js';
+import ordersRoutes from './routes/orders.routes.js';
 import productionRoutes from './routes/production.routes.js';
 import purchasesRoutes from './routes/purchases.routes.js';
 import { ensureSeededOnBoot } from './seed/benchmark.js';
@@ -52,6 +53,7 @@ export function createApp() {
   app.use('/api/inventory', inventoryRoutes);
   app.use('/api/purchases', purchasesRoutes);
   app.use('/api/production-runs', productionRoutes);
+  app.use('/api/orders', ordersRoutes);
 
   // Global error handler
   app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {

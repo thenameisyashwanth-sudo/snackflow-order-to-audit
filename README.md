@@ -1,6 +1,6 @@
-# SnackFlow — Order-to-Audit System for a Small Food Manufacturer
+# SnackFlow — Order-to-Audit ERP for Food Manufacturing
 
-Prototype built for the **Centre for Digital Infrastructure (CDI), NIT Tiruchirappalli** internship problem statement. SnackFlow unifies field sales orders, GST billing, recipe-based production (BOM), double-entry ledger inventory, costing, and month-end auditor reports into a single transactional system.
+End-to-end Order-to-Audit ERP designed for regional Indian packaged snack manufacturers. SnackFlow unifies mobile field sales, recipe-based batch production, double-entry ledger inventory, weighted-average costing, GST billing, and month-end statutory audit reporting into a single transactional system.
 
 ---
 
@@ -15,7 +15,7 @@ docker compose up --build
 - **Frontend PWA:** `http://localhost:5173`
 - **Backend API:** `http://localhost:4000/api/health`
 - **PostgreSQL:** `localhost:5432` (`snackflow` / `snackflow_dev_pwd`)
-- On first startup, the backend automatically runs `prisma migrate deploy` and seeds all Section 5 benchmark master data, opening `StockLedger` balances, and 6 role accounts.
+- On first startup, the backend automatically runs `prisma migrate deploy` and seeds initial factory master data, opening `StockLedger` balances, and 6 role accounts.
 
 ### Option B: Local Development (Node.js 22 + PostgreSQL 16+)
 
@@ -39,7 +39,7 @@ npm test
 
 ---
 
-## 2. Test Credentials & One-Click Benchmark Reset
+## 2. Demo Credentials & One-Click Data Reset
 
 The login screen provides **1-click Quick Demo Login** buttons for all 6 seeded roles (default password for all accounts: `password123`):
 
@@ -52,7 +52,7 @@ The login screen provides **1-click Quick Demo Login** buttons for all 6 seeded 
 | External Auditor | `auditor@factory.in` | `password123` | Desktop (Read-Only) · All 6 monthly reports + Excel/CSV/PDF/Tally exports |
 | Factory Owner | `owner@factory.in` | `password123` | Any Device · Executive KPIs, variance alerts, packet cost, receivables |
 
-**Reset Benchmark Data:** Logged-in `ADMIN` or `OWNER` users have a **"Reset Benchmark Data"** button in the top bar (`POST /api/admin/reset-benchmark`) that atomically clears transactional tables and restores the exact Section 5 opening state in one click.
+**Reset Demo Data:** Logged-in `ADMIN` or `OWNER` users have a **"Reset Benchmark Data"** button in the top bar (`POST /api/admin/reset-benchmark`) that atomically clears transactional tables and restores the clean factory opening state in one click.
 
 ---
 
@@ -62,9 +62,9 @@ We chose **Node.js + Express + TypeScript + Prisma ORM + PostgreSQL** paired wit
 
 ---
 
-## 4. Feature Coverage Against Section 6 Scope
+## 4. Implemented Capabilities
 
-### Must-Have
+### Core Operations
 - [x] Role-based authentication (`SALESMAN`, `ADMIN`, `PRODUCTION`, `AUDITOR`, `OWNER`) with strict API & UI guards
 - [x] Product, Customer, Supplier, Raw/Packaging Item, and Two-Layer BOM masters
 - [x] Mobile-friendly field order entry (`+10/+25/+50/+100` taps) & Admin inline verification/approval
@@ -74,7 +74,7 @@ We chose **Node.js + Express + TypeScript + Prisma ORM + PostgreSQL** paired wit
 - [x] Reconciled Stock Summary (`Opening + Receipts - Issues/Scrap - Sales + Returns ± Adjustments = Closing`) and itemized Stock Ledger
 - [x] Sales Register & Stock Reports exportable to Excel (`.xlsx`), CSV (`.csv`), and PDF (`.pdf`)
 
-### Should-Have
+### Financial Controls & Executive Visibility
 - [x] Supplier purchases (`PURCHASE_RECEIPT`) updating Weighted Average Cost (WAC)
 - [x] Customer payments, live invoice-wise outstanding, and `0–30 / 31–60 / 61–90 / 90+` day ageing report
 - [x] Cost per packet with post-run editable overheads (`labour` + `gas/power`), margin %, and FIFO comparison
@@ -82,7 +82,7 @@ We chose **Node.js + Express + TypeScript + Prisma ORM + PostgreSQL** paired wit
 - [x] Owner Executive Dashboard (`OwnerDashboardPage`) with interactive **Live Two-Loop Factory Flow Visualizer** (`TwoLoopFactoryFlow`) showing Production & Sales loops converging at Finished Goods Stock
 - [x] **Self-Service Products & BOM Pack-Size Builder** (`MastersBomPage` + `POST /api/masters/skus`) allowing Admins/Owners to launch new pack sizes (e.g., `Murukku 500 g` yielding `80 packets/batch`) sharing a bulk recipe with zero code or schema edits
 
-### Stretch Goals Implemented
+### Field Resilience, Compliance & Floor Ergonomics
 - [x] **Offline Order Capture & Auto-Sync:** `localStorage` queue with UUID `clientOrderId` idempotency, `"Simulate Offline"` demo toggle, and automatic flush upon reconnect
 - [x] **Batch & Expiry Tracking (FEFO):** Batch numbers, expiry dates, and `"Earliest Expiry — Dispatch First"` priority indicators
 - [x] **Reorder Levels & Low-Stock Alerts:** Reorder thresholds on raw, packaging, and finished items with warning badges
@@ -100,12 +100,12 @@ We chose **Node.js + Express + TypeScript + Prisma ORM + PostgreSQL** paired wit
 snackflow-order-to-audit/
 ├── docker-compose.yml                  # Single-command Postgres + Backend + Frontend PWA
 ├── backend/
-│   ├── prisma/                         # Schema, PostgreSQL migrations & Section 5 seed
+│   ├── prisma/                         # Schema, PostgreSQL migrations & factory reference seed
 │   └── src/
 │       ├── routes/                     # auth, admin, masters (+ POST /skus), inventory, purchases, production, orders, invoices, payments, reports
 │       ├── services/                   # ledger/WAC/FIFO, BOM production, GST invoicing & PDF, e-Invoice JSON, reports & xlsx/csv/pdf/tally exports
 │       ├── utils/                      # integer-paisa BigInt math, base-unit conversion, Indian GST & FY utilities
-│       └── __tests__/                  # 8 Vitest suites (22 tests) covering math, RBAC, BOM extensibility, exports & full 9-step E2E benchmark
+│       └── __tests__/                  # 8 Vitest suites (22 tests) covering math, RBAC, BOM extensibility, exports & full 9-step E2E factory flow
 └── frontend/
     └── src/
         ├── components/                 # AppShell (RBAC nav + Tamil toggle + Reset), TwoLoopFactoryFlow
@@ -117,26 +117,26 @@ snackflow-order-to-audit/
 
 ---
 
-## 6. Assumptions & Known Gaps
+## 6. Design Decisions & Scope Boundaries
 
-### Documented Assumptions
+### Accounting & Operational Rules
 1. **Inventory Valuation Method:** Bulk ingredients and finished goods use **Weighted Average Cost (WAC)** stored in `Decimal(14,4)` (`₹/displayUnit`) so `100 kg @ ₹42 + 60 kg @ ₹45 = 160 kg @ ₹43.1250/kg`. A FIFO comparison figure (`₹30.90/packet`) is also computed alongside WAC (`₹31.14/packet`).
 2. **Normal Scrap Absorption:** Damaged pouches during packing (`6 pcs`) are deducted via `PROD_SCRAP` in `StockLedger` and absorbed into the cost of good packets produced (`188 pcs`), matching standard process costing.
-3. **Partial Cartons:** In Step 3, `188` good packets fill `9` full 20-packet cartons (`180` packets), leaving `8` loose packets held in reusable factory crates without consuming a 10th carton.
+3. **Partial Cartons:** When a batch yields packets that are not a full multiple of 20 (e.g., `188` packets = `9` full cartons + `8` loose packets), loose packets are held in reusable factory crates without consuming a 10th carton.
 4. **Financial Year & Tolerance:** Invoice (`FY26-27/001`) and Credit Note (`CN/FY26-27/001`) sequences reset on April 1. Default variance tolerance is `±3.0%`.
 
-### Known Gaps
+### Current Scope Boundaries
 - **e-Invoice / e-Way Bill:** Uses a deterministic mock NIC v1.1 schema generator rather than live GSTN sandbox credentials.
-- **Single-Factory Scope:** Models one manufacturing plant in Tamil Nadu (`State Code 33`); inter-branch warehouse transfers are outside scope.
+- **Single-Factory Scope:** Models one manufacturing plant in Tamil Nadu (`State Code 33`); inter-branch warehouse transfers are outside current scope.
 - **Partial Dispatch:** Schema fields (`dispatchedQtyPackets`, `PARTIALLY_DISPATCHED`) are modeled, while the Admin UI currently triggers full-invoice dispatch in one click.
 
 ---
 
-## 7. Section 5 Benchmark Verification Results
+## 7. End-to-End Factory Walkthrough & Reference Scenario
 
 Verified end-to-end by automated suite [`e2e-section5-benchmark.test.ts`](backend/src/__tests__/e2e-section5-benchmark.test.ts):
 
-| Benchmark Check | Expected | System Output | Status |
+| Walkthrough Check | Reference Calculation | System Output | Status |
 | --- | --- | --- | --- |
 | Flour closing balance | `120 kg` (`100 + 60 − 40`) | `120 kg` (`120,000 g` @ `₹43.1250/kg` WAC) | Match |
 | Cooking oil closing balance | `19.5 L` | `19.5 L` (`19,500 ml`) | Match |

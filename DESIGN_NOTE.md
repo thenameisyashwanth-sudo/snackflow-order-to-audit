@@ -34,7 +34,7 @@ Food manufacturing differs from discrete assembly: the same cooked batch of doug
 1. **Layer 1 (`Recipe` & `RecipeIngredient`):** Defines the bulk dough formula in integer base units (`Murukku Base Batch`: `batchYieldG = 40,000 g` from `40,000 g` Flour, `10,000 ml` Cooking oil, and `1,200 g` Spice mix).
 2. **Layer 2 (`ProductSku` & `SkuPackagingBom`):** Links each sellable pack SKU to its `Recipe` via `netWeightG` and defines packaging ratios as integer pairs (`qtyBase` per `perPackets` packets).
    - **Expected Packets Formula:** $\text{Expected Packets} = \lfloor \text{recipe.batchYieldG} / \text{sku.netWeightG} \rfloor \times \text{batchCount}$.
-   - **Live Interview Extension (`Murukku 500 g`):** Adding a `500 g` pack size sharing `Murukku Base Batch` requires **zero schema or code changes**—Admins/Owners can create it directly via the **Products & BOM (`+ Add Pack Size SKU`)** UI (`POST /api/masters/skus`) or database seed. Inserting the `ProductSku` (`netWeightG = 500`) and `SkuPackagingBom` (`1` 500 g pouch/pkt; `1` carton/10 pkts) automatically computes $40,000 / 500 = 80$ expected packets per batch and scales packaging and costing identically.
+   - **Zero-Schema Pack-Size Extension (`Murukku 500 g`):** Adding a `500 g` pack size sharing `Murukku Base Batch` requires **zero schema or code changes**—Admins/Owners can create it directly via the **Products & BOM (`+ Add Pack Size SKU`)** UI (`POST /api/masters/skus`) or database seed. Inserting the `ProductSku` (`netWeightG = 500`) and `SkuPackagingBom` (`1` 500 g pouch/pkt; `1` carton/10 pkts) automatically computes $40,000 / 500 = 80$ expected packets per batch and scales packaging and costing identically.
 
 ---
 

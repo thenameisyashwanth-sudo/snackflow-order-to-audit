@@ -15,6 +15,7 @@
     "test": "npm --workspace=backend test && npm --workspace=frontend test",
     "prisma:generate": "npm --workspace=backend run prisma:generate",
     "prisma:migrate": "npm --workspace=backend run prisma:migrate",
+    "db:migrate": "npm --workspace=backend run prisma:migrate:deploy",
     "prisma:seed": "npm --workspace=backend run seed",
     "seed": "npm --workspace=backend run seed",
     "typecheck": "npm --workspace=backend run typecheck && npm --workspace=frontend run typecheck"

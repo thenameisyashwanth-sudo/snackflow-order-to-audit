@@ -5,8 +5,10 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import AdminInvoicesPage from './pages/AdminInvoicesPage';
 import AdminOrdersPage from './pages/AdminOrdersPage';
 import AdminPaymentsPage from './pages/AdminPaymentsPage';
+import AuditorReportsPage from './pages/AuditorReportsPage';
 import LoginPage from './pages/LoginPage';
 import InventoryStockPage from './pages/InventoryStockPage';
+import OwnerDashboardPage from './pages/OwnerDashboardPage';
 import ProductionRunsPage from './pages/ProductionRunsPage';
 import PurchasesPage from './pages/PurchasesPage';
 import { ForbiddenView, RoleModuleView } from './pages/RoleModuleView';
@@ -64,6 +66,10 @@ function AppRoutes() {
             element = <AdminInvoicesPage />;
           } else if (item.id === 'payments') {
             element = <AdminPaymentsPage />;
+          } else if (item.id === 'owner-dashboard') {
+            element = <OwnerDashboardPage />;
+          } else if (item.id === 'reports') {
+            element = <AuditorReportsPage />;
           }
 
           return (

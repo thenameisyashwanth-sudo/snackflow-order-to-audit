@@ -31,7 +31,7 @@ export const NAV_ITEMS: NavItem[] = [
     label: 'Owner Dashboard',
     path: '/owner',
     icon: BarChart3,
-    roles: ['OWNER'],
+    roles: ['OWNER', 'ADMIN'],
     description: "Today's orders, stock levels, variance alerts, packet cost & dues",
   },
 

@@ -13,6 +13,7 @@ import ordersRoutes from './routes/orders.routes.js';
 import paymentsRoutes from './routes/payments.routes.js';
 import productionRoutes from './routes/production.routes.js';
 import purchasesRoutes from './routes/purchases.routes.js';
+import reportsRoutes from './routes/reports.routes.js';
 import { ensureSeededOnBoot } from './seed/benchmark.js';
 
 export function createApp() {
@@ -58,6 +59,7 @@ export function createApp() {
   app.use('/api/orders', ordersRoutes);
   app.use('/api/invoices', invoicesRoutes);
   app.use('/api/payments', paymentsRoutes);
+  app.use('/api/reports', reportsRoutes);
 
   // Global error handler
   app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {

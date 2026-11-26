@@ -10,10 +10,13 @@ import {
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { fetchOwnerSummary } from '../api/reports';
+import TwoLoopFactoryFlow from '../components/TwoLoopFactoryFlow';
+import { useAuth } from '../context/AuthContext';
 import { OwnerExecutiveSummary } from '../types/reports';
 import { formatINR } from '../utils/format';
 
 export default function OwnerDashboardPage() {
+  const { user } = useAuth();
   const [summary, setSummary] = useState<OwnerExecutiveSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -55,6 +58,9 @@ export default function OwnerDashboardPage() {
           Open Monthly Audit Reports
         </Link>
       </div>
+
+      {/* Interactive Live Two-Loop Factory Flow */}
+      <TwoLoopFactoryFlow summary={summary} role={user?.role ?? 'OWNER'} />
 
       {/* Top KPI Cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

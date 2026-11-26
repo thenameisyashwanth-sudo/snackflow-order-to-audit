@@ -23,7 +23,7 @@ const TRANSLATIONS: Record<string, { en: string; ta: string }> = {
   'nav.production-runs': { en: 'Production & BOM', ta: 'உற்பத்தி & BOM' },
   'nav.purchases': { en: 'Raw Material Receipts', ta: 'மூலப்பொருள் கொள்முதல்' },
   'nav.inventory': { en: 'Stock & Ledger', ta: 'சரக்கு & பதிவேடு' },
-  'nav.bom-masters': { en: 'Recipes & SKUs', ta: 'செய்முறை & SKU' },
+  'nav.bom-masters': { en: 'Products & BOM', ta: 'பொருட்கள் & BOM' },
   'nav.reports': { en: 'Audit Reports', ta: 'தணிக்கை அறிக்கைகள்' },
   'nav.catalog': { en: 'Price List', ta: 'விலை பட்டியல்' },
 

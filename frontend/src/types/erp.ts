@@ -85,6 +85,30 @@ export interface Customer {
   address?: string | null;
 }
 
+export interface RecipeMaster {
+  id: string;
+  code: string;
+  name: string;
+  nameTamil: string | null;
+  batchYieldG: number;
+  yieldTolerancePct: string;
+  consumptionTolerancePct: string;
+  overheadRuleNote: string | null;
+  ingredients: Array<{
+    id: string;
+    inventoryItemId: string;
+    standardQtyBase: number;
+    sequence: number;
+    inventoryItem: {
+      id: string;
+      skuCode: string;
+      name: string;
+      displayUnit: string;
+      displayFactor: number;
+    };
+  }>;
+}
+
 export interface ProductSku {
   id: string;
   skuCode: string;

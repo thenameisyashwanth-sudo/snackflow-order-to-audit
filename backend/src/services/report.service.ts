@@ -597,7 +597,16 @@ export async function getOwnerExecutiveSummary() {
   const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
 
   const monthRange = resolveReportDateRange();
-  const [todaysOrders, stockReport, prodReport, receivablesReport] = await Promise.all([
+  const [
+    todaysOrders,
+    stockReport,
+    prodReport,
+    receivablesReport,
+    purchaseReport,
+    salesReport,
+    submittedOrdersCount,
+    dispatchedInvoiceCount,
+  ] = await Promise.all([
     prisma.salesOrder.findMany({
       where: { orderDate: { gte: startOfToday, lte: endOfToday } },
       select: { id: true, orderNo: true, totalPaisa: true, status: true },
@@ -605,6 +614,12 @@ export async function getOwnerExecutiveSummary() {
     getStockAndLedgerReport(monthRange),
     getProductionVarianceReport(monthRange),
     getPaymentsAndAgeingReport(monthRange),
+    getPurchaseRegisterReport(monthRange),
+    getSalesRegisterReport(monthRange),
+    prisma.salesOrder.count({ where: { status: 'SUBMITTED' } }),
+    prisma.invoice.count({
+      where: { status: 'POSTED', dispatchedAt: { not: null } },
+    }),
   ]);
 
   const allBalances = [
@@ -618,11 +633,31 @@ export async function getOwnerExecutiveSummary() {
   );
   const latestRun = prodReport.runs[0] ?? null;
 
+  const rawPkgValuePaisa = [...stockReport.rawMaterials, ...stockReport.packagingMaterials].reduce(
+    (s, b) => s + b.closingValuePaisa,
+    0
+  );
+  const totalFgPackets = stockReport.finishedGoods.reduce((s, b) => s + b.closingQtyBase, 0);
+
   return {
     generatedAt: now.toISOString(),
     todaysOrders: {
       count: todaysOrders.length,
       totalPaisa: todaysOrders.reduce((s, o) => s + o.totalPaisa, 0),
+    },
+    loopMetrics: {
+      purchaseLineCount: purchaseReport.totals.lineCount,
+      purchaseTotalPaisa: purchaseReport.totals.totalPaisa,
+      rawPkgItemCount:
+        stockReport.rawMaterials.length + stockReport.packagingMaterials.length,
+      rawPkgValuePaisa,
+      productionRunCount: prodReport.runCount,
+      totalFgPackets,
+      submittedOrdersCount,
+      postedInvoiceCount: salesReport.totals.invoiceCount,
+      postedInvoiceTotalPaisa: salesReport.totals.totalPaisa,
+      dispatchedInvoiceCount,
+      totalCollectedPaisa: receivablesReport.totalCollectedInPeriodPaisa,
     },
     stockLevels: {
       rawMaterials: stockReport.rawMaterials,

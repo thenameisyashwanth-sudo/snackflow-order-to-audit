@@ -9,6 +9,7 @@ import AdminPaymentsPage from './pages/AdminPaymentsPage';
 import AuditorReportsPage from './pages/AuditorReportsPage';
 import LoginPage from './pages/LoginPage';
 import InventoryStockPage from './pages/InventoryStockPage';
+import MastersBomPage from './pages/MastersBomPage';
 import OwnerDashboardPage from './pages/OwnerDashboardPage';
 import ProductionRunsPage from './pages/ProductionRunsPage';
 import PurchasesPage from './pages/PurchasesPage';
@@ -71,6 +72,8 @@ function AppRoutes() {
             element = <OwnerDashboardPage />;
           } else if (item.id === 'reports') {
             element = <AuditorReportsPage />;
+          } else if (item.id === 'bom-masters') {
+            element = <MastersBomPage />;
           }
 
           return (

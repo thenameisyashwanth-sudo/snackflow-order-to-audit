@@ -6,6 +6,19 @@ export interface OwnerExecutiveSummary {
     count: number;
     totalPaisa: number;
   };
+  loopMetrics?: {
+    purchaseLineCount: number;
+    purchaseTotalPaisa: number;
+    rawPkgItemCount: number;
+    rawPkgValuePaisa: number;
+    productionRunCount: number;
+    totalFgPackets: number;
+    submittedOrdersCount: number;
+    postedInvoiceCount: number;
+    postedInvoiceTotalPaisa: number;
+    dispatchedInvoiceCount: number;
+    totalCollectedPaisa: number;
+  };
   stockLevels: {
     rawMaterials: InventoryBalance[];
     packagingMaterials: InventoryBalance[];

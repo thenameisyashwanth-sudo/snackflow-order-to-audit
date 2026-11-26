@@ -116,11 +116,11 @@ export const NAV_ITEMS: NavItem[] = [
   },
   {
     id: 'bom-masters',
-    label: 'Recipes & SKUs',
+    label: 'Products & BOM',
     path: '/masters/bom',
     icon: Layers,
-    roles: ['ADMIN', 'PRODUCTION', 'OWNER'],
-    description: 'Two-layer BOM: bulk recipes, pack-size SKUs, customers & suppliers',
+    roles: ['ADMIN', 'OWNER'],
+    description: 'Two-layer BOM: bulk recipes, pack-size SKUs, and live SKU builder',
   },
 
   // Auditor / Month-End Reports

@@ -4,6 +4,7 @@ import {
   ProductionRunRecord,
   ProductSku,
   PurchaseRecord,
+  RecipeMaster,
   StockLedgerEntry,
   Supplier,
 } from '../types/erp';
@@ -14,8 +15,29 @@ export function fetchMastersOverview() {
     inventoryItems: InventoryBalance[];
     suppliers: Supplier[];
     customers: Customer[];
+    recipes: RecipeMaster[];
     productSkus: ProductSku[];
   }>('/masters/overview');
+}
+
+export function createProductSku(payload: {
+  name: string;
+  nameTamil?: string;
+  skuCode?: string;
+  recipeId: string;
+  netWeightG: number;
+  packetsPerCarton: number;
+  sellingPricePaisa: number;
+  gstRateBps: number;
+  hsnCode: string;
+  shelfLifeDays?: number;
+  pouchPackagingItemId?: string;
+  cartonPackagingItemId?: string;
+}) {
+  return apiRequest<{ productSku: ProductSku }>('/masters/skus', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
 }
 
 export function fetchInventoryBalances(category?: string) {

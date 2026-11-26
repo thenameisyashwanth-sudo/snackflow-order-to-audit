@@ -11,6 +11,6 @@ export const env = {
   jwtSecret: process.env.JWT_SECRET ?? 'snackflow-dev-secret-change-me',
   factoryStateCode: process.env.FACTORY_STATE_CODE ?? '33',
   factoryName: process.env.FACTORY_NAME ?? 'Kaveri Traditional Snacks Pvt Ltd',
-  factoryGstin: process.env.FACTORY_GSTIN ?? '33AABCK1234F1Z5',
+  factoryGstin: process.env.FACTORY_GSTIN ?? '33AABCS1429B1Z5',
   corsOrigin: process.env.CORS_ORIGIN ?? 'http://localhost:5173',
 };

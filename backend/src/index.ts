@@ -1,9 +1,12 @@
 import cors from 'cors';
-import express from 'express';
+import express, { NextFunction, Request, Response } from 'express';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import { env } from './config/env.js';
 import { prisma } from './db/prisma.js';
+import adminRoutes from './routes/admin.routes.js';
+import authRoutes from './routes/auth.routes.js';
+import { ensureSeededOnBoot } from './seed/benchmark.js';
 
 export function createApp() {
   const app = express();
@@ -25,6 +28,7 @@ export function createApp() {
         status: 'ok',
         service: 'snackflow-backend',
         factory: env.factoryName,
+        factoryGstin: env.factoryGstin,
         stateCode: env.factoryStateCode,
         timestamp: new Date().toISOString(),
       });
@@ -38,12 +42,28 @@ export function createApp() {
     }
   });
 
+  app.use('/api/auth', authRoutes);
+  app.use('/api/admin', adminRoutes);
+
+  // Global error handler
+  app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
+    console.error('[API Error]', err);
+    const message = err instanceof Error ? err.message : 'Internal server error';
+    res.status(500).json({ error: message });
+  });
+
   return app;
 }
 
 if (process.env.NODE_ENV !== 'test') {
   const app = createApp();
-  app.listen(env.port, () => {
-    console.log(`[SnackFlow API] Listening on http://localhost:${env.port}`);
-  });
+  ensureSeededOnBoot(prisma)
+    .catch((err) => {
+      console.warn('[SnackFlow] Boot seed check skipped or failed:', err.message);
+    })
+    .finally(() => {
+      app.listen(env.port, () => {
+        console.log(`[SnackFlow API] Listening on http://localhost:${env.port}`);
+      });
+    });
 }

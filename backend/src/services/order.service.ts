@@ -324,9 +324,25 @@ export async function listSalesOrders(params: {
   );
 
   const enrichedOrders = orders.map((order) => {
+    let previewCgstPaisa = 0;
+    let previewSgstPaisa = 0;
+    let previewIgstPaisa = 0;
+    const isInterState = order.customer.stateCode !== env.factoryStateCode;
+
     const itemsWithStock = order.items.map((it) => {
       const availablePackets = fgStockMap.get(it.productSku.inventoryItemId) ?? 0;
       const shortagePackets = Math.max(0, it.qtyPackets - availablePackets);
+      const gst = computeGstLineItem({
+        qtyPackets: it.qtyPackets,
+        unitPricePaisa: it.unitPricePaisa,
+        gstRateBps: it.gstRateBps,
+        factoryStateCode: env.factoryStateCode,
+        placeOfSupplyStateCode: order.customer.stateCode,
+      });
+      previewCgstPaisa += gst.cgstPaisa;
+      previewSgstPaisa += gst.sgstPaisa;
+      previewIgstPaisa += gst.igstPaisa;
+
       return {
         ...it,
         availablePackets,
@@ -340,6 +356,14 @@ export async function listSalesOrders(params: {
       items: itemsWithStock,
       allItemsInStock: itemsWithStock.every((i) => i.isStockSufficient),
       totalShortagePackets: itemsWithStock.reduce((s, i) => s + i.shortagePackets, 0),
+      gstPreview: {
+        isInterState,
+        taxablePaisa: order.subtotalPaisa,
+        cgstPaisa: previewCgstPaisa,
+        sgstPaisa: previewSgstPaisa,
+        igstPaisa: previewIgstPaisa,
+        totalPaisa: order.totalPaisa,
+      },
     };
   });
 

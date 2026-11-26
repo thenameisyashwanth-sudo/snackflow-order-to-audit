@@ -71,6 +71,9 @@ export interface Customer {
   stateCode: string;
   stateName: string;
   routeName: string | null;
+  email?: string | null;
+  phone?: string | null;
+  address?: string | null;
 }
 
 export interface ProductSku {

@@ -3,6 +3,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { prisma } from '../db/prisma.js';
 import { authenticate, requireRole } from '../middleware/auth.js';
+import { createInvoiceFromOrder, verifySalesOrder } from '../services/invoice.service.js';
 import { createSalesOrder, listSalesOrders } from '../services/order.service.js';
 
 const router = Router();
@@ -122,6 +123,78 @@ router.post(
       },
     });
     res.status(201).json({ visit });
+  }
+);
+
+const verifyOrderSchema = z.object({
+  action: z.enum(['APPROVE', 'REJECT', 'UPDATE_ONLY']),
+  rejectionReason: z.string().optional(),
+  items: z
+    .array(
+      z.object({
+        productSkuId: z.string().min(1),
+        qtyPackets: z.number().int().positive(),
+        unitPricePaisa: z.number().int().nonnegative(),
+      })
+    )
+    .optional(),
+});
+
+router.patch(
+  '/:id/verify',
+  authenticate,
+  requireRole('ADMIN'),
+  async (req, res) => {
+    const parsed = verifyOrderSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: parsed.error.issues[0]?.message ?? 'Invalid verification input' });
+      return;
+    }
+
+    try {
+      const order = await verifySalesOrder({
+        orderId: String(req.params.id),
+        action: parsed.data.action,
+        rejectionReason: parsed.data.rejectionReason,
+        items: parsed.data.items,
+        userId: req.user!.id,
+      });
+      res.json({ order });
+    } catch (error) {
+      res.status(400).json({
+        error: error instanceof Error ? error.message : 'Unable to verify order',
+      });
+    }
+  }
+);
+
+const createInvoiceSchema = z.object({
+  autoApprove: z.boolean().optional(),
+});
+
+router.post(
+  '/:id/invoice',
+  authenticate,
+  requireRole('ADMIN'),
+  async (req, res) => {
+    const parsed = createInvoiceSchema.safeParse(req.body ?? {});
+    if (!parsed.success) {
+      res.status(400).json({ error: 'Invalid invoice request' });
+      return;
+    }
+
+    try {
+      const invoice = await createInvoiceFromOrder({
+        orderId: String(req.params.id),
+        userId: req.user!.id,
+        autoApprove: parsed.data.autoApprove ?? true,
+      });
+      res.status(201).json({ invoice });
+    } catch (error) {
+      res.status(400).json({
+        error: error instanceof Error ? error.message : 'Unable to raise GST invoice',
+      });
+    }
   }
 );
 

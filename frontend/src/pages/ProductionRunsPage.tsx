@@ -8,6 +8,7 @@ import {
   X,
 } from 'lucide-react';
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   createProductionRun,
   fetchMastersOverview,
@@ -19,6 +20,7 @@ import { InventoryBalance, ProductionRunRecord, ProductSku } from '../types/erp'
 import { formatBaseQty, formatINR, rupeesInputToPaisa } from '../utils/format';
 
 export default function ProductionRunsPage() {
+  const [searchParams] = useSearchParams();
   const { user } = useAuth();
   const canCreate = user?.role === 'PRODUCTION' || user?.role === 'ADMIN';
   const canEditOverheads =
@@ -33,8 +35,8 @@ export default function ProductionRunsPage() {
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   // New Run Form State
-  const [skuId, setSkuId] = useState('');
-  const [batchCount, setBatchCount] = useState('1');
+  const [skuId, setSkuId] = useState(() => searchParams.get('skuId') ?? '');
+  const [batchCount, setBatchCount] = useState(() => searchParams.get('batches') ?? '1');
   const [issueInputs, setIssueInputs] = useState<Record<string, string>>({});
   const [actualGoodPackets, setActualGoodPackets] = useState('188');
   const [damagedPouches, setDamagedPouches] = useState('6');
@@ -61,16 +63,25 @@ export default function ProductionRunsPage() {
       setBalances(masters.inventoryItems);
       setRuns(runsRes.runs);
 
-      if (masters.productSkus.length > 0 && !skuId) {
-        const firstSku = masters.productSkus[0];
-        setSkuId(firstSku.id);
-        const defaults: Record<string, string> = {};
-        for (const ing of firstSku.recipe.ingredients) {
-          defaults[ing.inventoryItemId] = (
-            ing.standardQtyBase / ing.inventoryItem.displayFactor
-          ).toString();
+      if (masters.productSkus.length > 0) {
+        const requestedSku = searchParams.get('skuId');
+        const targetSku =
+          masters.productSkus.find((s) => s.id === (skuId || requestedSku)) ??
+          masters.productSkus[0];
+        if (!skuId) {
+          setSkuId(targetSku.id);
         }
-        setIssueInputs(defaults);
+        if (Object.keys(issueInputs).length === 0) {
+          const factor = Number(batchCount) || 1;
+          const defaults: Record<string, string> = {};
+          for (const ing of targetSku.recipe.ingredients) {
+            defaults[ing.inventoryItemId] = (
+              (ing.standardQtyBase * factor) /
+              ing.inventoryItem.displayFactor
+            ).toString();
+          }
+          setIssueInputs(defaults);
+        }
       }
 
       if (runsRes.runs.length > 0 && !selectedRunId) {

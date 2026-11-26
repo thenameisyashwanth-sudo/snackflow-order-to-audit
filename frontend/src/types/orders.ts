@@ -45,6 +45,14 @@ export interface SalesOrderRecord {
   rejectionReason: string | null;
   allItemsInStock?: boolean;
   totalShortagePackets?: number;
+  gstPreview?: {
+    isInterState: boolean;
+    taxablePaisa: number;
+    cgstPaisa: number;
+    sgstPaisa: number;
+    igstPaisa: number;
+    totalPaisa: number;
+  };
   customer: Customer;
   salesman: { id: string; name: string; email: string };
   invoice?: {
@@ -109,4 +117,92 @@ export interface SalesmanVisitRecord {
     routeName: string | null;
     stateName: string;
   };
+}
+
+export interface InvoiceRecord {
+  id: string;
+  invoiceNo: string;
+  financialYear: string;
+  sequenceNo: number;
+  salesOrderId: string | null;
+  customerId: string;
+  factoryStateCode: string;
+  placeOfSupplyStateCode: string;
+  isInterState: boolean;
+  status: 'POSTED' | 'CANCELLED';
+  taxablePaisa: number;
+  cgstPaisa: number;
+  sgstPaisa: number;
+  igstPaisa: number;
+  totalPaisa: number;
+  paidPaisa: number;
+  outstandingPaisa: number;
+  dispatchedAt: string | null;
+  issuedAt: string;
+  customer: Customer;
+  salesOrder?: {
+    id: string;
+    orderNo: string;
+    salesman: { name: string };
+  } | null;
+  items: Array<{
+    id: string;
+    hsnCode: string;
+    qtyPackets: number;
+    dispatchedQtyPackets: number;
+    unitPricePaisa: number;
+    gstRateBps: number;
+    taxablePaisa: number;
+    cgstPaisa: number;
+    sgstPaisa: number;
+    igstPaisa: number;
+    totalPaisa: number;
+    productSku: {
+      id: string;
+      skuCode: string;
+      name: string;
+      packetsPerCarton: number;
+    };
+  }>;
+  creditNotes: Array<{
+    id: string;
+    creditNoteNo: string;
+    reason: string;
+    totalPaisa: number;
+    issuedAt: string;
+  }>;
+}
+
+export interface PaymentRecord {
+  id: string;
+  paymentNo: string;
+  customerId: string;
+  invoiceId: string | null;
+  amountPaisa: number;
+  method: 'CASH' | 'UPI' | 'NEFT_RTGS' | 'CHEQUE' | 'BANK_TRANSFER';
+  referenceNo: string | null;
+  notes: string | null;
+  receivedAt: string;
+  customer: Customer;
+  invoice?: {
+    id: string;
+    invoiceNo: string;
+    totalPaisa: number;
+    paidPaisa: number;
+    status: string;
+  } | null;
+  recordedBy: { id: string; name: string };
+}
+
+export interface CustomerReceivable {
+  customerId: string;
+  customerCode: string;
+  customerName: string;
+  customerType: string;
+  stateCode: string;
+  stateName: string;
+  totalInvoicedPaisa: number;
+  totalPaidPaisa: number;
+  creditNoteTotalPaisa: number;
+  outstandingPaisa: number;
 }

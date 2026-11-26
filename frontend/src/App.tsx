@@ -2,6 +2,9 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import AppShell from './components/AppShell';
 import { getHomePathForRole, NAV_ITEMS } from './config/navigation';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import AdminInvoicesPage from './pages/AdminInvoicesPage';
+import AdminOrdersPage from './pages/AdminOrdersPage';
+import AdminPaymentsPage from './pages/AdminPaymentsPage';
 import LoginPage from './pages/LoginPage';
 import InventoryStockPage from './pages/InventoryStockPage';
 import ProductionRunsPage from './pages/ProductionRunsPage';
@@ -55,6 +58,12 @@ function AppRoutes() {
             element = <SalesmanCatalogPage />;
           } else if (item.id === 'visit-log') {
             element = <SalesmanVisitsPage />;
+          } else if (item.id === 'order-verification') {
+            element = <AdminOrdersPage />;
+          } else if (item.id === 'invoices-dispatch') {
+            element = <AdminInvoicesPage />;
+          } else if (item.id === 'payments') {
+            element = <AdminPaymentsPage />;
           }
 
           return (

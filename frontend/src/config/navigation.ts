@@ -93,7 +93,7 @@ export const NAV_ITEMS: NavItem[] = [
     label: 'Production & BOM',
     path: '/production/runs',
     icon: Factory,
-    roles: ['PRODUCTION', 'OWNER'],
+    roles: ['PRODUCTION', 'ADMIN', 'OWNER'],
     description: 'Batch execution, planned vs actual consumption, yield & variance flags',
   },
   {

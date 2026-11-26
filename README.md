@@ -79,7 +79,8 @@ We chose **Node.js + Express + TypeScript + Prisma ORM + PostgreSQL** paired wit
 - [x] Customer payments, live invoice-wise outstanding, and `0–30 / 31–60 / 61–90 / 90+` day ageing report
 - [x] Cost per packet with post-run editable overheads (`labour` + `gas/power`), margin %, and FIFO comparison
 - [x] GST Outward Supplies report mapped to **GSTR-1** (B2B) and **GSTR-3B** (Table 3.1)
-- [x] Owner Executive Dashboard (today's orders, stock levels, variance alerts, packet cost, receivables)
+- [x] Owner Executive Dashboard (`OwnerDashboardPage`) with interactive **Live Two-Loop Factory Flow Visualizer** (`TwoLoopFactoryFlow`) showing Production & Sales loops converging at Finished Goods Stock
+- [x] **Self-Service Products & BOM Pack-Size Builder** (`MastersBomPage` + `POST /api/masters/skus`) allowing Admins/Owners to launch new pack sizes (e.g., `Murukku 500 g` yielding `80 packets/batch`) sharing a bulk recipe with zero code or schema edits
 
 ### Stretch Goals Implemented
 - [x] **Offline Order Capture & Auto-Sync:** `localStorage` queue with UUID `clientOrderId` idempotency, `"Simulate Offline"` demo toggle, and automatic flush upon reconnect
@@ -93,7 +94,30 @@ We chose **Node.js + Express + TypeScript + Prisma ORM + PostgreSQL** paired wit
 
 ---
 
-## 5. Assumptions & Known Gaps
+## 5. Project Structure & Automated Verification
+
+```text
+snackflow-order-to-audit/
+├── docker-compose.yml                  # Single-command Postgres + Backend + Frontend PWA
+├── backend/
+│   ├── prisma/                         # Schema, PostgreSQL migrations & Section 5 seed
+│   └── src/
+│       ├── routes/                     # auth, admin, masters (+ POST /skus), inventory, purchases, production, orders, invoices, payments, reports
+│       ├── services/                   # ledger/WAC/FIFO, BOM production, GST invoicing & PDF, e-Invoice JSON, reports & xlsx/csv/pdf/tally exports
+│       ├── utils/                      # integer-paisa BigInt math, base-unit conversion, Indian GST & FY utilities
+│       └── __tests__/                  # 8 Vitest suites (22 tests) covering math, RBAC, BOM extensibility, exports & full 9-step E2E benchmark
+└── frontend/
+    └── src/
+        ├── components/                 # AppShell (RBAC nav + Tamil toggle + Reset), TwoLoopFactoryFlow
+        ├── context/                    # AuthContext, LanguageContext (EN / தமிழ்)
+        └── pages/                      # SalesmanOrderPage, ProductionRunsPage, PurchasesPage, InventoryStockPage, AdminOrders/Invoices/Payments, OwnerDashboardPage, MastersBomPage, AuditorReportsPage
+```
+
+- **Automated Test Suite (`npm test`):** **24 tests passing** — `22` backend tests across `8` files (including `bom-extensibility.test.ts` and `e2e-section5-benchmark.test.ts`) + `2` frontend tests across `2` files.
+
+---
+
+## 6. Assumptions & Known Gaps
 
 ### Documented Assumptions
 1. **Inventory Valuation Method:** Bulk ingredients and finished goods use **Weighted Average Cost (WAC)** stored in `Decimal(14,4)` (`₹/displayUnit`) so `100 kg @ ₹42 + 60 kg @ ₹45 = 160 kg @ ₹43.1250/kg`. A FIFO comparison figure (`₹30.90/packet`) is also computed alongside WAC (`₹31.14/packet`).
@@ -108,7 +132,7 @@ We chose **Node.js + Express + TypeScript + Prisma ORM + PostgreSQL** paired wit
 
 ---
 
-## 6. Section 5 Benchmark Verification Results
+## 7. Section 5 Benchmark Verification Results
 
 Verified end-to-end by automated suite [`e2e-section5-benchmark.test.ts`](backend/src/__tests__/e2e-section5-benchmark.test.ts):
 

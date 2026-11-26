@@ -1,0 +1,24 @@
+{
+  "name": "snackflow-order-to-audit",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Order-to-Audit System for a Small Food Manufacturer (NIT Tiruchirappalli CDI Prototype)",
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "scripts": {
+    "dev": "concurrently -n API,WEB -c cyan,magenta \"npm --workspace=backend run dev\" \"npm --workspace=frontend run dev\"",
+    "dev:backend": "npm --workspace=backend run dev",
+    "dev:frontend": "npm --workspace=frontend run dev",
+    "build": "npm --workspace=backend run build && npm --workspace=frontend run build",
+    "test": "npm --workspace=backend test && npm --workspace=frontend test",
+    "prisma:generate": "npm --workspace=backend run prisma:generate",
+    "prisma:migrate": "npm --workspace=backend run prisma:migrate",
+    "prisma:seed": "npm --workspace=backend run prisma:seed",
+    "typecheck": "npm --workspace=backend run typecheck && npm --workspace=frontend run typecheck"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}

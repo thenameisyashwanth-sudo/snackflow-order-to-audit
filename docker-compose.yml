@@ -1,0 +1,56 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: snackflow-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-snackflow}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-snackflow_dev_pwd}
+      POSTGRES_DB: ${POSTGRES_DB:-snackflow}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-snackflow} -d ${POSTGRES_DB:-snackflow}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: snackflow-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      DATABASE_URL: postgresql://${POSTGRES_USER:-snackflow}:${POSTGRES_PASSWORD:-snackflow_dev_pwd}@postgres:5432/${POSTGRES_DB:-snackflow}?schema=public
+      JWT_SECRET: ${JWT_SECRET:-snackflow-super-secret-jwt-key-change-in-prod}
+      FACTORY_STATE_CODE: ${FACTORY_STATE_CODE:-33}
+      FACTORY_NAME: ${FACTORY_NAME:-Kaveri Traditional Snacks Pvt Ltd}
+      FACTORY_GSTIN: ${FACTORY_GSTIN:-33AABCK1234F1Z5}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5173}
+    ports:
+      - "${BACKEND_PORT:-4000}:4000"
+    command: sh -c "npx prisma migrate deploy && node dist/index.js"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: snackflow-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      VITE_API_URL: ${VITE_API_URL:-http://localhost:4000/api}
+    ports:
+      - "${FRONTEND_PORT:-5173}:80"
+
+volumes:
+  postgres_data:

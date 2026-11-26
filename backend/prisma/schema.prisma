@@ -1,0 +1,619 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// ENUMS
+// ---------------------------------------------------------------------------
+
+enum UserRole {
+  SALESMAN
+  ADMIN
+  PRODUCTION
+  AUDITOR
+  OWNER
+}
+
+enum CustomerType {
+  RETAILER
+  DISTRIBUTOR
+}
+
+enum ItemCategory {
+  RAW_MATERIAL
+  PACKAGING
+  FINISHED_GOOD
+}
+
+enum BaseUnit {
+  GRAM
+  MILLILITRE
+  PIECE
+}
+
+enum MovementType {
+  INITIAL_OPENING
+  PURCHASE_RECEIPT
+  PROD_ISSUE
+  PROD_OUTPUT
+  PROD_SCRAP
+  SALES_DISPATCH
+  CREDIT_NOTE_RETURN
+  ADJUSTMENT
+}
+
+enum LedgerSourceType {
+  OPENING
+  PURCHASE
+  PRODUCTION_RUN
+  INVOICE
+  CREDIT_NOTE
+  ADJUSTMENT
+}
+
+enum ProductionStatus {
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum SalesOrderStatus {
+  SUBMITTED
+  APPROVED
+  REJECTED
+  INVOICED
+  PARTIALLY_DISPATCHED
+  DISPATCHED
+  CANCELLED
+}
+
+enum InvoiceStatus {
+  POSTED
+  CANCELLED
+}
+
+enum PaymentMethod {
+  CASH
+  UPI
+  NEFT_RTGS
+  CHEQUE
+  BANK_TRANSFER
+}
+
+// ---------------------------------------------------------------------------
+// USERS & MASTER DATA
+// ---------------------------------------------------------------------------
+
+model User {
+  id            String   @id @default(cuid())
+  name          String
+  email         String   @unique
+  passwordHash  String
+  role          UserRole
+  phone         String?
+  preferredLang String   @default("en")
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  salesOrders       SalesOrder[]    @relation("SalesmanOrders")
+  approvedOrders    SalesOrder[]    @relation("ApprovedOrders")
+  purchases         Purchase[]
+  productionRuns    ProductionRun[]
+  invoices          Invoice[]
+  creditNotes       CreditNote[]
+  payments          Payment[]
+  stockMovements    StockLedger[]
+  auditLogs         AuditLog[]
+  salesmanVisits    SalesmanVisit[]
+
+  @@index([role])
+}
+
+model Customer {
+  id               String       @id @default(cuid())
+  code             String       @unique
+  name             String
+  type             CustomerType
+  gstin            String?
+  stateCode        String       @default("33") // 33 = Tamil Nadu, 29 = Karnataka
+  stateName        String       @default("Tamil Nadu")
+  address          String?
+  phone            String?
+  email            String?
+  routeName        String?
+  creditLimitPaisa Int?
+  isActive         Boolean      @default(true)
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  customPrices   CustomerPrice[]
+  salesOrders    SalesOrder[]
+  invoices       Invoice[]
+  creditNotes    CreditNote[]
+  payments       Payment[]
+  salesmanVisits SalesmanVisit[]
+
+  @@index([type])
+  @@index([stateCode])
+}
+
+model Supplier {
+  id        String   @id @default(cuid())
+  code      String   @unique
+  name      String
+  gstin     String?
+  stateCode String   @default("33")
+  stateName String   @default("Tamil Nadu")
+  address   String?
+  phone     String?
+  email     String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  purchases Purchase[]
+}
+
+model InventoryItem {
+  id                         String       @id @default(cuid())
+  skuCode                    String       @unique
+  name                       String
+  nameTamil                  String?
+  category                   ItemCategory
+  baseUnit                   BaseUnit
+  displayUnit                String // e.g., "kg", "L", "pcs", "pkt"
+  displayFactor              Int          @default(1) // 1000 for g->kg or ml->L, 1 for pcs->pcs/pkt
+  reorderLevelBase           Int          @default(0)
+  currentWeightedRateDecimal Decimal      @default(0) @db.Decimal(14, 4) // INR per displayUnit
+  hsnCode                    String?
+  gstRateBps                 Int          @default(500) // 500 = 5.00%
+  isActive                   Boolean      @default(true)
+  createdAt                  DateTime     @default(now())
+  updatedAt                  DateTime     @updatedAt
+
+  // Relations
+  stockLedger            StockLedger[]
+  purchaseItems          PurchaseItem[]
+  recipeIngredients      RecipeIngredient[]
+  skuPackagingBoms       SkuPackagingBom[]
+  finishedProductSku     ProductSku?
+  productionConsumptions ProductionConsumption[]
+
+  @@index([category])
+}
+
+// ---------------------------------------------------------------------------
+// TWO-LAYER BOM ARCHITECTURE
+// Layer 1: Recipe & RecipeIngredient (Bulk food dough/batch formula)
+// Layer 2: ProductSku & SkuPackagingBom (Pack-size, weight, pricing, packaging)
+// ---------------------------------------------------------------------------
+
+model Recipe {
+  id                      String   @id @default(cuid())
+  code                    String   @unique
+  name                    String
+  nameTamil               String?
+  batchYieldG             Int // e.g., 40000 grams per standard batch
+  yieldTolerancePct       Decimal  @default(3.00) @db.Decimal(5, 2)
+  consumptionTolerancePct Decimal  @default(3.00) @db.Decimal(5, 2)
+  overheadRuleNote        String?
+  isActive                Boolean  @default(true)
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+
+  ingredients RecipeIngredient[]
+  productSkus ProductSku[]
+}
+
+model RecipeIngredient {
+  id              String @id @default(cuid())
+  recipeId        String
+  inventoryItemId String
+  standardQtyBase Int // Stored in base units: grams or millilitres
+  sequence        Int    @default(1)
+
+  recipe        Recipe        @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  inventoryItem InventoryItem @relation(fields: [inventoryItemId], references: [id])
+
+  @@unique([recipeId, inventoryItemId])
+}
+
+model ProductSku {
+  id                 String   @id @default(cuid())
+  skuCode            String   @unique
+  name               String
+  nameTamil          String?
+  recipeId           String
+  inventoryItemId    String   @unique // Finished-good ledger item
+  netWeightG         Int // e.g., 200 g; expected packets/batch = floor(recipe.batchYieldG / netWeightG)
+  packetsPerCarton   Int      @default(20)
+  sellingPricePaisa  Int // Pre-tax selling price per packet in integer paisa (5000 = ₹50.00)
+  gstRateBps         Int      @default(500) // Basis points: 500 = 5.00%
+  hsnCode            String   @default("19059090")
+  shelfLifeDays      Int      @default(90)
+  isActive           Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  recipe         Recipe            @relation(fields: [recipeId], references: [id])
+  inventoryItem  InventoryItem     @relation(fields: [inventoryItemId], references: [id])
+  packagingBom   SkuPackagingBom[]
+  customerPrices CustomerPrice[]
+  productionRuns ProductionRun[]
+  salesOrderItems SalesOrderItem[]
+  invoiceItems   InvoiceItem[]
+  creditNoteItems CreditNoteItem[]
+
+  @@index([recipeId])
+}
+
+model SkuPackagingBom {
+  id              String @id @default(cuid())
+  productSkuId    String
+  packagingItemId String
+  packagingRole   String // e.g., "PRIMARY_POUCH", "CARTON", "LABEL"
+  qtyBase         Int    @default(1) // Pieces needed per `perPackets` packets
+  perPackets      Int    @default(1) // 1 for pouch (1 per 1 pkt), 20 for carton (1 per 20 pkts)
+
+  productSku    ProductSku    @relation(fields: [productSkuId], references: [id], onDelete: Cascade)
+  packagingItem InventoryItem @relation(fields: [packagingItemId], references: [id])
+
+  @@unique([productSkuId, packagingItemId])
+}
+
+model CustomerPrice {
+  id            String    @id @default(cuid())
+  customerId    String
+  productSkuId  String
+  pricePaisa    Int
+  minQtyPackets Int       @default(1)
+  effectiveFrom DateTime  @default(now())
+  effectiveTo   DateTime?
+
+  customer   Customer   @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  productSku ProductSku @relation(fields: [productSkuId], references: [id], onDelete: Cascade)
+
+  @@unique([customerId, productSkuId, minQtyPackets])
+}
+
+// ---------------------------------------------------------------------------
+// IMMUTABLE DOUBLE-ENTRY STOCK LEDGER
+// Current stock for any item = SUM(qtyBaseDelta)
+// ---------------------------------------------------------------------------
+
+model StockLedger {
+  id              String           @id @default(cuid())
+  inventoryItemId String
+  movementType    MovementType
+  qtyBaseDelta    Int // Positive for inflow, negative for outflow
+  unitCostDecimal Decimal          @db.Decimal(14, 4) // INR per displayUnit
+  totalValuePaisa Int // Monetary value in paisa for movement
+  batchNo         String?
+  expiryDate      DateTime?
+  sourceType      LedgerSourceType
+  sourceId        String
+  notes           String?
+  createdById     String
+  createdAt       DateTime         @default(now())
+
+  inventoryItem InventoryItem @relation(fields: [inventoryItemId], references: [id])
+  createdBy     User          @relation(fields: [createdById], references: [id])
+
+  @@index([inventoryItemId, createdAt])
+  @@index([inventoryItemId, expiryDate])
+  @@index([sourceType, sourceId])
+}
+
+// ---------------------------------------------------------------------------
+// PROCUREMENT & PRODUCTION LOOP
+// ---------------------------------------------------------------------------
+
+model Purchase {
+  id                String   @id @default(cuid())
+  purchaseNo        String   @unique
+  supplierId        String
+  supplierInvoiceNo String?
+  purchaseDate      DateTime @default(now())
+  taxablePaisa      Int
+  gstPaisa          Int
+  totalPaisa        Int
+  notes             String?
+  createdById       String
+  createdAt         DateTime @default(now())
+
+  supplier  Supplier       @relation(fields: [supplierId], references: [id])
+  createdBy User           @relation(fields: [createdById], references: [id])
+  items     PurchaseItem[]
+
+  @@index([purchaseDate])
+  @@index([supplierId])
+}
+
+model PurchaseItem {
+  id                    String    @id @default(cuid())
+  purchaseId            String
+  inventoryItemId       String
+  qtyBase               Int
+  ratePerDisplayDecimal Decimal   @db.Decimal(14, 4)
+  gstRateBps            Int       @default(500)
+  taxablePaisa          Int
+  gstPaisa              Int
+  totalPaisa            Int
+  batchNo               String?
+  expiryDate            DateTime?
+
+  purchase      Purchase      @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+  inventoryItem InventoryItem @relation(fields: [inventoryItemId], references: [id])
+}
+
+model ProductionRun {
+  id                         String           @id @default(cuid())
+  runNo                      String           @unique
+  productSkuId               String
+  batchCount                 Decimal          @default(1.0000) @db.Decimal(10, 4)
+  status                     ProductionStatus @default(IN_PROGRESS)
+  batchNo                    String
+  expiryDate                 DateTime?
+  expectedPackets            Int
+  actualGoodPackets          Int?
+  damagedPackets             Int              @default(0)
+  yieldVariancePct           Decimal?         @db.Decimal(8, 4)
+  isYieldVarianceFlagged     Boolean          @default(false)
+  hasConsumptionVarianceFlag Boolean          @default(false)
+  rawMaterialCostPaisa       Int              @default(0)
+  packagingCostPaisa         Int              @default(0)
+  labourCostPaisa            Int              @default(0)
+  gasPowerCostPaisa          Int              @default(0)
+  otherOverheadPaisa         Int              @default(0)
+  totalCostPaisa             Int              @default(0)
+  costPerPacketPaisa         Int              @default(0)
+  startedAt                  DateTime         @default(now())
+  completedAt                DateTime?
+  notes                      String?
+  createdById                String
+  createdAt                  DateTime         @default(now())
+  updatedAt                  DateTime         @updatedAt
+
+  productSku   ProductSku              @relation(fields: [productSkuId], references: [id])
+  createdBy    User                    @relation(fields: [createdById], references: [id])
+  consumptions ProductionConsumption[]
+
+  @@index([status])
+  @@index([startedAt])
+  @@index([productSkuId])
+}
+
+model ProductionConsumption {
+  id                String  @id @default(cuid())
+  productionRunId   String
+  inventoryItemId   String
+  isPackaging       Boolean @default(false)
+  plannedQtyBase    Int
+  actualQtyBase     Int
+  damagedQtyBase    Int     @default(0)
+  varianceQtyBase   Int // actualQtyBase - plannedQtyBase (or includes damaged for packaging)
+  variancePct       Decimal @db.Decimal(8, 4)
+  isVarianceFlagged Boolean @default(false)
+  unitCostDecimal   Decimal @db.Decimal(14, 4)
+  totalCostPaisa    Int
+  batchNo           String?
+
+  productionRun ProductionRun @relation(fields: [productionRunId], references: [id], onDelete: Cascade)
+  inventoryItem InventoryItem @relation(fields: [inventoryItemId], references: [id])
+
+  @@index([productionRunId])
+}
+
+// ---------------------------------------------------------------------------
+// SALES LOOP: ORDERS -> GST INVOICES -> DISPATCH -> CREDIT NOTES -> PAYMENTS
+// ---------------------------------------------------------------------------
+
+model SalesOrder {
+  id              String           @id @default(cuid())
+  orderNo         String           @unique
+  clientOrderId   String?          @unique // Offline PWA sync idempotency key
+  customerId      String
+  salesmanId      String
+  status          SalesOrderStatus @default(SUBMITTED)
+  orderDate       DateTime         @default(now())
+  subtotalPaisa   Int
+  gstPaisa        Int
+  totalPaisa      Int
+  notes           String?
+  rejectionReason String?
+  latitude        Decimal?         @db.Decimal(10, 7)
+  longitude       Decimal?         @db.Decimal(10, 7)
+  approvedById    String?
+  approvedAt      DateTime?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  customer   Customer         @relation(fields: [customerId], references: [id])
+  salesman   User             @relation("SalesmanOrders", fields: [salesmanId], references: [id])
+  approvedBy User?            @relation("ApprovedOrders", fields: [approvedById], references: [id])
+  items      SalesOrderItem[]
+  invoice    Invoice?
+
+  @@index([status])
+  @@index([salesmanId])
+  @@index([customerId])
+  @@index([orderDate])
+}
+
+model SalesOrderItem {
+  id             String @id @default(cuid())
+  salesOrderId   String
+  productSkuId   String
+  qtyPackets     Int
+  unitPricePaisa Int
+  gstRateBps     Int
+  taxablePaisa   Int
+  gstPaisa       Int
+  totalPaisa     Int
+
+  salesOrder SalesOrder @relation(fields: [salesOrderId], references: [id], onDelete: Cascade)
+  productSku ProductSku @relation(fields: [productSkuId], references: [id])
+}
+
+model Invoice {
+  id                     String        @id @default(cuid())
+  invoiceNo              String        @unique // e.g., FY26-27/001
+  financialYear          String // e.g., FY26-27
+  sequenceNo             Int
+  salesOrderId           String?       @unique
+  customerId             String
+  factoryStateCode       String        @default("33")
+  placeOfSupplyStateCode String
+  isInterState           Boolean
+  status                 InvoiceStatus @default(POSTED)
+  taxablePaisa           Int
+  cgstPaisa              Int
+  sgstPaisa              Int
+  igstPaisa              Int
+  totalPaisa             Int
+  paidPaisa              Int           @default(0)
+  dispatchedAt           DateTime?
+  eInvoiceIrn            String?
+  eWayBillNo             String?
+  issuedAt               DateTime      @default(now())
+  createdById            String
+  createdAt              DateTime      @default(now())
+  updatedAt              DateTime      @updatedAt
+
+  salesOrder  SalesOrder?   @relation(fields: [salesOrderId], references: [id])
+  customer    Customer      @relation(fields: [customerId], references: [id])
+  createdBy   User          @relation(fields: [createdById], references: [id])
+  items       InvoiceItem[]
+  creditNotes CreditNote[]
+  payments    Payment[]
+
+  @@unique([financialYear, sequenceNo])
+  @@index([customerId])
+  @@index([issuedAt])
+  @@index([status])
+}
+
+model InvoiceItem {
+  id                   String @id @default(cuid())
+  invoiceId            String
+  productSkuId         String
+  hsnCode              String
+  qtyPackets           Int
+  dispatchedQtyPackets Int    @default(0)
+  unitPricePaisa       Int
+  gstRateBps           Int
+  taxablePaisa         Int
+  cgstPaisa            Int
+  sgstPaisa            Int
+  igstPaisa            Int
+  totalPaisa           Int
+
+  invoice    Invoice    @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  productSku ProductSku @relation(fields: [productSkuId], references: [id])
+}
+
+model CreditNote {
+  id           String   @id @default(cuid())
+  creditNoteNo String   @unique // e.g., CN/FY26-27/001
+  invoiceId    String
+  customerId   String
+  reason       String
+  restockGoods Boolean  @default(true)
+  taxablePaisa Int
+  cgstPaisa    Int
+  sgstPaisa    Int
+  igstPaisa    Int
+  totalPaisa   Int
+  issuedAt     DateTime @default(now())
+  createdById  String
+  createdAt    DateTime @default(now())
+
+  invoice   Invoice          @relation(fields: [invoiceId], references: [id])
+  customer  Customer         @relation(fields: [customerId], references: [id])
+  createdBy User             @relation(fields: [createdById], references: [id])
+  items     CreditNoteItem[]
+
+  @@index([invoiceId])
+  @@index([customerId])
+}
+
+model CreditNoteItem {
+  id             String @id @default(cuid())
+  creditNoteId   String
+  productSkuId   String
+  qtyPackets     Int
+  unitPricePaisa Int
+  taxablePaisa   Int
+  cgstPaisa      Int
+  sgstPaisa      Int
+  igstPaisa      Int
+  totalPaisa     Int
+
+  creditNote CreditNote @relation(fields: [creditNoteId], references: [id], onDelete: Cascade)
+  productSku ProductSku @relation(fields: [productSkuId], references: [id])
+}
+
+model Payment {
+  id           String        @id @default(cuid())
+  paymentNo    String        @unique
+  customerId   String
+  invoiceId    String?
+  amountPaisa  Int
+  method       PaymentMethod @default(UPI)
+  referenceNo  String?
+  notes        String?
+  receivedAt   DateTime      @default(now())
+  recordedById String
+  createdAt    DateTime      @default(now())
+
+  customer   Customer @relation(fields: [customerId], references: [id])
+  invoice    Invoice? @relation(fields: [invoiceId], references: [id])
+  recordedBy User     @relation(fields: [recordedById], references: [id])
+
+  @@index([customerId])
+  @@index([invoiceId])
+  @@index([receivedAt])
+}
+
+// ---------------------------------------------------------------------------
+// FIELD VISIT LOGS & AUDIT TRAIL
+// ---------------------------------------------------------------------------
+
+model SalesmanVisit {
+  id         String   @id @default(cuid())
+  salesmanId String
+  customerId String
+  visitedAt  DateTime @default(now())
+  latitude   Decimal? @db.Decimal(10, 7)
+  longitude  Decimal? @db.Decimal(10, 7)
+  outcome    String // e.g., "ORDER_PLACED", "PAYMENT_FOLLOWUP", "NO_ORDER"
+  notes      String?
+
+  salesman User     @relation(fields: [salesmanId], references: [id])
+  customer Customer @relation(fields: [customerId], references: [id])
+
+  @@index([salesmanId, visitedAt])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String
+  action     String // e.g., "UPDATE_INVOICE", "CANCEL_INVOICE", "UPDATE_PRODUCTION_RUN"
+  entityType String // e.g., "Invoice", "ProductionRun", "SalesOrder"
+  entityId   String
+  beforeJson Json?
+  afterJson  Json?
+  ipAddress  String?
+  createdAt  DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([entityType, entityId])
+  @@index([createdAt])
+}

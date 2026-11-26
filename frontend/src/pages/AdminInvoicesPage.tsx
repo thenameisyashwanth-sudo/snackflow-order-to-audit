@@ -1,6 +1,9 @@
 import {
   Ban,
+  Check,
   CheckCircle2,
+  Code2,
+  Copy,
   Download,
   FileText,
   Mail,
@@ -13,6 +16,7 @@ import {
   cancelInvoiceRequest,
   dispatchInvoiceRequest,
   downloadInvoicePdf,
+  fetchEInvoiceJson,
   fetchInvoices,
 } from '../api/orders';
 import { InvoiceRecord } from '../types/orders';
@@ -29,6 +33,13 @@ export default function AdminInvoicesPage() {
   const [cancellingInv, setCancellingInv] = useState<InvoiceRecord | null>(null);
   const [cancelReason, setCancelReason] = useState('Customer cancelled order / price correction');
   const [restockGoods, setRestockGoods] = useState(true);
+
+  // e-Invoice / e-Way Bill JSON Modal
+  const [einvoiceModal, setEinvoiceModal] = useState<{
+    invoiceNo: string;
+    jsonText: string;
+  } | null>(null);
+  const [copiedJson, setCopiedJson] = useState(false);
 
   const loadInvoices = useCallback(async () => {
     setLoading(true);
@@ -70,6 +81,27 @@ export default function AdminInvoicesPage() {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to download PDF');
     }
+  }
+
+  async function handleViewEInvoice(inv: InvoiceRecord) {
+    setError(null);
+    setCopiedJson(false);
+    try {
+      const res = await fetchEInvoiceJson(inv.id);
+      setEinvoiceModal({
+        invoiceNo: inv.invoiceNo,
+        jsonText: JSON.stringify(res.einvoice, null, 2),
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to fetch e-Invoice JSON');
+    }
+  }
+
+  async function handleCopyJson() {
+    if (!einvoiceModal) return;
+    await navigator.clipboard.writeText(einvoiceModal.jsonText);
+    setCopiedJson(true);
+    setTimeout(() => setCopiedJson(false), 2000);
   }
 
   async function handleConfirmCancel(e: FormEvent) {
@@ -254,6 +286,15 @@ export default function AdminInvoicesPage() {
                     Download GST PDF
                   </button>
 
+                  <button
+                    type="button"
+                    onClick={() => void handleViewEInvoice(inv)}
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-semibold text-indigo-800 hover:bg-indigo-100"
+                  >
+                    <Code2 className="h-3.5 w-3.5" />
+                    e-Invoice / e-Way Bill JSON
+                  </button>
+
                   <a
                     href={`https://wa.me/?text=${shareText}`}
                     target="_blank"
@@ -370,6 +411,43 @@ export default function AdminInvoicesPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {/* e-Invoice / e-Way Bill JSON Modal */}
+      {einvoiceModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="flex max-h-[85vh] w-full max-w-2xl flex-col rounded-2xl bg-white p-6 shadow-xl">
+            <div className="flex items-center justify-between border-b border-stone-200 pb-3">
+              <div>
+                <h3 className="text-base font-bold text-stone-900">
+                  Mock NIC e-Invoice (IRN) &amp; e-Way Bill JSON · {einvoiceModal.invoiceNo}
+                </h3>
+                <p className="text-xs text-stone-500">
+                  GST e-Invoice v1.1 schema with deterministic SHA-256 IRN &amp; EwbDtls
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => void handleCopyJson()}
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-amber-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-800"
+                >
+                  {copiedJson ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                  {copiedJson ? 'Copied!' : 'Copy JSON'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEinvoiceModal(null)}
+                  className="rounded-lg p-1 text-stone-400 hover:bg-stone-100"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
+            <pre className="mt-4 flex-1 overflow-auto rounded-xl bg-stone-950 p-4 text-xs text-emerald-300">
+              {einvoiceModal.jsonText}
+            </pre>
           </div>
         </div>
       )}

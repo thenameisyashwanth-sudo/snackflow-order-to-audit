@@ -1,5 +1,13 @@
 export type ItemCategory = 'RAW_MATERIAL' | 'PACKAGING' | 'FINISHED_GOOD';
 
+export interface FefoBatchSummary {
+  batchNo: string;
+  expiryDate: string | null;
+  remainingQtyBase: number;
+  remainingDisplay: string;
+  isEarliestExpiry: boolean;
+}
+
 export interface InventoryBalance {
   inventoryItemId: string;
   skuCode: string;
@@ -23,6 +31,7 @@ export interface InventoryBalance {
   isLowStock: boolean;
   hsnCode: string | null;
   gstRateBps: number;
+  fefoBatches?: FefoBatchSummary[];
 }
 
 export interface StockLedgerEntry {

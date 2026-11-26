@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import AppShell from './components/AppShell';
 import { getHomePathForRole, NAV_ITEMS } from './config/navigation';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { LanguageProvider } from './context/LanguageContext';
 import AdminInvoicesPage from './pages/AdminInvoicesPage';
 import AdminOrdersPage from './pages/AdminOrdersPage';
 import AdminPaymentsPage from './pages/AdminPaymentsPage';
@@ -88,8 +89,10 @@ function AppRoutes() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <AppRoutes />
-    </AuthProvider>
+    <LanguageProvider>
+      <AuthProvider>
+        <AppRoutes />
+      </AuthProvider>
+    </LanguageProvider>
   );
 }

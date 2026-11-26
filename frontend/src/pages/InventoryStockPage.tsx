@@ -1,6 +1,7 @@
-import { AlertTriangle, Layers, Warehouse } from 'lucide-react';
+import { AlertTriangle, CalendarClock, Layers, Warehouse } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { fetchInventoryBalances, fetchStockLedger } from '../api/erp';
+import { useLanguage } from '../context/LanguageContext';
 import { InventoryBalance, ItemCategory, StockLedgerEntry } from '../types/erp';
 import { formatBaseQty, formatINR } from '../utils/format';
 
@@ -12,6 +13,7 @@ const CATEGORY_TABS: Array<{ id: 'ALL' | ItemCategory; label: string }> = [
 ];
 
 export default function InventoryStockPage() {
+  const { localizeItemName } = useLanguage();
   const [categoryFilter, setCategoryFilter] = useState<'ALL' | ItemCategory>('ALL');
   const [selectedItemId, setSelectedItemId] = useState<string>('');
   const [balances, setBalances] = useState<InventoryBalance[]>([]);
@@ -136,7 +138,9 @@ export default function InventoryStockPage() {
                   }`}
                 >
                   <td className="px-3 py-2.5">
-                    <div className="font-semibold text-stone-900">{b.name}</div>
+                    <div className="font-semibold text-stone-900">
+                      {localizeItemName(b.name, b.nameTamil)}
+                    </div>
                     <div className="font-mono text-[11px] text-stone-500">{b.skuCode}</div>
                   </td>
                   <td className="px-3 py-2.5 text-xs text-stone-600">{b.category}</td>
@@ -157,7 +161,7 @@ export default function InventoryStockPage() {
                       <span>{b.closingDisplay}</span>
                       {b.isLowStock && (
                         <span className="inline-flex items-center gap-0.5 rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-semibold text-rose-800">
-                          <AlertTriangle className="h-3 w-3" /> Low
+                          <AlertTriangle className="h-3 w-3" /> Low — Reorder
                         </span>
                       )}
                     </div>
@@ -172,6 +176,62 @@ export default function InventoryStockPage() {
               ))}
             </tbody>
           </table>
+        </div>
+      </div>
+
+      {/* FEFO Batch & Expiry Tracking */}
+      <div className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm">
+        <div className="flex items-center gap-2 pb-3">
+          <CalendarClock className="h-5 w-5 text-amber-700" />
+          <h2 className="text-base font-bold text-stone-900">
+            Batch &amp; Expiry Tracking (FEFO — First-Expiry-First-Out)
+          </h2>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {balances.map((b) => (
+            <div key={b.inventoryItemId} className="rounded-xl border border-stone-200 p-3.5 text-xs">
+              <div className="flex items-center justify-between font-bold text-stone-900">
+                <span>{localizeItemName(b.name, b.nameTamil)}</span>
+                <span className="text-stone-500">{b.closingDisplay}</span>
+              </div>
+              {b.fefoBatches && b.fefoBatches.length > 0 ? (
+                <div className="mt-2 space-y-1.5">
+                  {b.fefoBatches.map((batch, idx) => (
+                    <div
+                      key={`${batch.batchNo}-${idx}`}
+                      className={`flex items-center justify-between rounded-lg px-2.5 py-1.5 ${
+                        batch.isEarliestExpiry
+                          ? 'border border-emerald-200 bg-emerald-50/70'
+                          : 'bg-stone-50'
+                      }`}
+                    >
+                      <div>
+                        <div className="font-mono font-semibold text-stone-800">
+                          {batch.batchNo}
+                        </div>
+                        <div className="text-[11px] text-stone-500">
+                          {batch.expiryDate
+                            ? `Exp: ${new Date(batch.expiryDate).toLocaleDateString('en-IN')}`
+                            : 'No expiry (Packaging)'}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="font-bold text-stone-900">{batch.remainingDisplay}</div>
+                        {batch.isEarliestExpiry && (
+                          <span className="inline-block rounded bg-emerald-700 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                            Earliest Expiry — Dispatch First
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="mt-2 text-stone-400">No active stock batches.</p>
+              )}
+            </div>
+          ))}
         </div>
       </div>
 

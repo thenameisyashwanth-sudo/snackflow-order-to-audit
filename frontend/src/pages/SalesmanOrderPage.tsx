@@ -13,6 +13,7 @@ import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { fetchMastersOverview } from '../api/erp';
 import { createSalesOrder, fetchSalesOrders } from '../api/orders';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 import { Customer, ProductSku } from '../types/erp';
 import {
   CustomerSalesSummary,
@@ -36,6 +37,7 @@ const FACTORY_STATE_CODE = '33';
 
 export default function SalesmanOrderPage() {
   const { user } = useAuth();
+  const { t, localizeItemName } = useLanguage();
   const userId = user?.id ?? 'anon';
 
   const [customers, setCustomers] = useState<Customer[]>(() => loadCachedSalesCatalog()?.customers ?? []);
@@ -310,7 +312,7 @@ export default function SalesmanOrderPage() {
       {/* Mobile Header with Network / Simulate Offline Toggle */}
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-stone-200 bg-white p-4 shadow-sm">
         <div>
-          <h1 className="text-lg font-bold text-stone-900">Field Salesman Order Desk</h1>
+          <h1 className="text-lg font-bold text-stone-900">{t('sales.deskTitle')}</h1>
           <p className="text-xs text-stone-500">
             Tap customer + pack qty — order goes direct to factory billing.
           </p>
@@ -421,7 +423,7 @@ export default function SalesmanOrderPage() {
             activeTab === 'new' ? 'bg-white text-stone-900 shadow-sm' : 'text-stone-600'
           }`}
         >
-          1. Place Order
+          {t('sales.placeOrder')}
         </button>
         <button
           type="button"
@@ -430,7 +432,7 @@ export default function SalesmanOrderPage() {
             activeTab === 'orders' ? 'bg-white text-stone-900 shadow-sm' : 'text-stone-600'
           }`}
         >
-          2. My Orders ({orders.length})
+          {t('sales.myOrders')} ({orders.length})
         </button>
       </div>
 
@@ -439,7 +441,7 @@ export default function SalesmanOrderPage() {
           {/* Customer Picker Tap Cards */}
           <div className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm">
             <div className="text-xs font-bold uppercase tracking-wide text-stone-500">
-              Step 1 · Select Customer
+              {t('sales.selectCustomer')}
             </div>
             <div className="mt-3 grid gap-2.5 sm:grid-cols-2">
               {customers.map((c) => {
@@ -483,7 +485,7 @@ export default function SalesmanOrderPage() {
           {/* Product & Quick Quantity Builder */}
           <div className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm space-y-4">
             <div className="text-xs font-bold uppercase tracking-wide text-stone-500">
-              Step 2 · Product & Packets
+              {t('sales.productQty')}
             </div>
 
             <div className="grid gap-2 sm:grid-cols-2">
@@ -501,7 +503,9 @@ export default function SalesmanOrderPage() {
                     }`}
                   >
                     <div>
-                      <div className="font-bold text-stone-900">{sku.name}</div>
+                      <div className="font-bold text-stone-900">
+                        {localizeItemName(sku.name, sku.nameTamil)}
+                      </div>
                       <div className="text-xs text-stone-500">
                         {formatINR(sku.sellingPricePaisa)} / pkt · GST {sku.gstRateBps / 100}%
                       </div>
@@ -607,12 +611,12 @@ export default function SalesmanOrderPage() {
               {isEffectiveOffline ? (
                 <>
                   <CloudOff className="h-4 w-4" />
-                  Save Order Offline
+                  {t('sales.saveOffline')}
                 </>
               ) : (
                 <>
                   <Send className="h-4 w-4" />
-                  {submitting ? 'Sending to Factory...' : 'Submit Order to Factory'}
+                  {submitting ? 'Sending to Factory...' : t('sales.submitOrder')}
                 </>
               )}
             </button>

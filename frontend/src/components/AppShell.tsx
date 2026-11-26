@@ -1,5 +1,6 @@
 import {
   Factory,
+  Languages,
   LogOut,
   Menu,
   RotateCcw,
@@ -11,10 +12,12 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { resetBenchmarkRequest } from '../api/client';
 import { getNavItemsForRole } from '../config/navigation';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 import { ROLE_BADGE_COLORS, ROLE_LABELS } from '../types/auth';
 
 export default function AppShell({ children }: { children: ReactNode }) {
   const { user, logout } = useAuth();
+  const { lang, toggleLang, t } = useLanguage();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [resetting, setResetting] = useState(false);
@@ -87,7 +90,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
                 }
               >
                 <Icon className="h-4 w-4 shrink-0" />
-                <span>{item.label}</span>
+                <span>{t(`nav.${item.id}`, item.label)}</span>
               </NavLink>
             );
           })}
@@ -136,6 +139,16 @@ export default function AppShell({ children }: { children: ReactNode }) {
             </div>
 
             <div className="flex items-center gap-2 sm:gap-3">
+              <button
+                type="button"
+                onClick={toggleLang}
+                className="inline-flex items-center gap-1.5 rounded-full border border-stone-300 bg-stone-50 px-3 py-1.5 text-xs font-semibold text-stone-800 transition hover:bg-amber-50 hover:border-amber-300"
+                title="Switch interface language between English and Tamil"
+              >
+                <Languages className="h-3.5 w-3.5 text-amber-700" />
+                <span>{lang === 'en' ? 'English / தமிழ்' : 'தமிழ் / English'}</span>
+              </button>
+
               {canResetBenchmark && (
                 <button
                   type="button"
@@ -190,7 +203,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
                       }
                     >
                       <Icon className="h-4 w-4" />
-                      <span>{item.label}</span>
+                      <span>{t(`nav.${item.id}`, item.label)}</span>
                     </NavLink>
                   );
                 })}
@@ -231,7 +244,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
               }
             >
               <Icon className="h-4 w-4" />
-              <span className="truncate">{item.label}</span>
+              <span className="truncate">{t(`nav.${item.id}`, item.label)}</span>
             </NavLink>
           );
         })}

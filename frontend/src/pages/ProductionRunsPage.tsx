@@ -16,12 +16,14 @@ import {
   updateProductionOverheads,
 } from '../api/erp';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 import { InventoryBalance, ProductionRunRecord, ProductSku } from '../types/erp';
 import { formatBaseQty, formatINR, rupeesInputToPaisa } from '../utils/format';
 
 export default function ProductionRunsPage() {
   const [searchParams] = useSearchParams();
   const { user } = useAuth();
+  const { t, localizeItemName } = useLanguage();
   const canCreate = user?.role === 'PRODUCTION' || user?.role === 'ADMIN';
   const canEditOverheads =
     user?.role === 'PRODUCTION' || user?.role === 'ADMIN' || user?.role === 'OWNER';
@@ -228,7 +230,7 @@ export default function ProductionRunsPage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-bold text-stone-900">
-            BOM Production Runs & Costing
+            {t('prod.title')}
           </h1>
           <p className="text-sm text-stone-600">
             Two-layer recipe & packaging BOM with automatic StockLedger deduction, &gt;3%
@@ -257,7 +259,7 @@ export default function ProductionRunsPage() {
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-stone-200 pb-4">
             <div className="flex items-center gap-2.5">
               <Factory className="h-5 w-5 text-amber-700" />
-              <h2 className="text-base font-bold text-stone-900">Log New Production Run</h2>
+              <h2 className="text-base font-bold text-stone-900">{t('prod.logRun')}</h2>
             </div>
             <div className="rounded-lg bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-900">
               Recipe: {activeSku.recipe.name} ({activeSku.recipe.batchYieldG / 1000} kg dough /
@@ -298,7 +300,7 @@ export default function ProductionRunsPage() {
 
             <div>
               <label className="block text-xs font-semibold text-stone-600">
-                Expected Output
+                {t('prod.expectedYield')}
               </label>
               <div className="mt-1 rounded-xl border border-stone-200 bg-stone-50 px-3 py-2 text-sm font-semibold text-stone-800">
                 {expectedPackets} packets
@@ -309,7 +311,7 @@ export default function ProductionRunsPage() {
           {/* Raw Materials Table */}
           <div className="mt-5">
             <h3 className="text-xs font-semibold uppercase tracking-wide text-stone-500">
-              Raw Material Issues (Planned vs Actual)
+              {t('prod.rawMaterialIssues')}
             </h3>
             <div className="mt-2 overflow-x-auto rounded-xl border border-stone-200">
               <table className="w-full text-left text-sm">
@@ -338,7 +340,7 @@ export default function ProductionRunsPage() {
                     return (
                       <tr key={ing.id}>
                         <td className="px-4 py-2.5 font-medium text-stone-900">
-                          {item.name}
+                          {localizeItemName(item.name)}
                           <span className="ml-2 text-xs text-stone-400">
                             @ ₹{bal?.wacRateDecimal ?? '0.00'}/{item.displayUnit}
                           </span>
@@ -391,7 +393,7 @@ export default function ProductionRunsPage() {
           <div className="mt-5 grid gap-4 sm:grid-cols-5">
             <div>
               <label className="block text-xs font-semibold text-stone-600">
-                Actual Good Packets
+                {t('prod.actualOutput')}
               </label>
               <input
                 type="number"
@@ -420,7 +422,7 @@ export default function ProductionRunsPage() {
 
             <div>
               <label className="block text-xs font-semibold text-stone-600">
-                Damaged Pouches (Scrap)
+                {t('prod.wastageDamaged')}
               </label>
               <input
                 type="number"
@@ -432,7 +434,9 @@ export default function ProductionRunsPage() {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-stone-600">Cartons Used</label>
+              <label className="block text-xs font-semibold text-stone-600">
+                {t('prod.cartonsUsed')}
+              </label>
               <input
                 type="number"
                 min="0"
@@ -485,7 +489,7 @@ export default function ProductionRunsPage() {
               className="inline-flex items-center gap-2 rounded-xl bg-amber-700 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-amber-800 disabled:opacity-60"
             >
               <Plus className="h-4 w-4" />
-              {submitting ? 'Posting Ledger...' : 'Save Production Run'}
+              {submitting ? 'Posting Ledger...' : t('prod.saveRun')}
             </button>
           </div>
         </form>
@@ -540,7 +544,7 @@ export default function ProductionRunsPage() {
                         {run.hasConsumptionVarianceFlag && (
                           <span className="inline-flex items-center gap-1 rounded-full bg-rose-100 px-2.5 py-0.5 text-xs font-semibold text-rose-800">
                             <AlertTriangle className="h-3 w-3" />
-                            BOM Variance &gt;3%
+                            {t('prod.varianceAlert')} (&gt;3%)
                           </span>
                         )}
                       </div>

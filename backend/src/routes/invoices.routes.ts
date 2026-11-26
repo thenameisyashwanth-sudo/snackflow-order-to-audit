@@ -6,6 +6,7 @@ import {
   cancelInvoiceWithCreditNote,
   dispatchInvoice,
 } from '../services/invoice.service.js';
+import { buildMockEInvoiceJson } from '../services/einvoice.service.js';
 import { generateGstInvoicePdfBuffer } from '../services/invoicePdf.service.js';
 
 const router = Router();
@@ -91,6 +92,35 @@ router.get(
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="Invoice-${safeFileName}.pdf"`);
     res.send(buffer);
+  }
+);
+
+router.get(
+  '/:id/einvoice-json',
+  authenticate,
+  requireRole('ADMIN', 'OWNER', 'AUDITOR'),
+  async (req, res) => {
+    const invoice = await prisma.invoice.findUnique({
+      where: { id: String(req.params.id) },
+      include: {
+        customer: true,
+        items: {
+          include: {
+            productSku: {
+              select: { name: true, skuCode: true },
+            },
+          },
+        },
+      },
+    });
+
+    if (!invoice) {
+      res.status(404).json({ error: 'Invoice not found.' });
+      return;
+    }
+
+    const payload = buildMockEInvoiceJson(invoice);
+    res.json({ einvoice: payload });
   }
 );
 

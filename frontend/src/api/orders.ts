@@ -119,6 +119,12 @@ export async function downloadInvoicePdf(invoiceId: string, invoiceNo: string): 
   URL.revokeObjectURL(url);
 }
 
+export function fetchEInvoiceJson(invoiceId: string) {
+  return apiRequest<{ einvoice: Record<string, unknown> }>(
+    `/invoices/${invoiceId}/einvoice-json`
+  );
+}
+
 export function fetchPaymentsAndReceivables() {
   return apiRequest<{
     payments: PaymentRecord[];

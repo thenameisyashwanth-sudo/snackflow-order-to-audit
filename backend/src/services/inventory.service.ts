@@ -10,6 +10,14 @@ import { fromBaseUnits } from '../utils/units.js';
 
 type DbClient = PrismaClient | Prisma.TransactionClient;
 
+export interface FefoBatchSummary {
+  batchNo: string;
+  expiryDate: string | null;
+  remainingQtyBase: number;
+  remainingDisplay: string;
+  isEarliestExpiry: boolean;
+}
+
 export interface ItemStockSummary {
   inventoryItemId: string;
   skuCode: string;
@@ -33,6 +41,7 @@ export interface ItemStockSummary {
   isLowStock: boolean;
   hsnCode: string | null;
   gstRateBps: number;
+  fefoBatches: FefoBatchSummary[];
 }
 
 /**
@@ -189,11 +198,14 @@ export async function getAllInventoryBalances(
     where: {
       ...(filters?.to ? { createdAt: { lte: filters.to } } : {}),
     },
+    orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
     select: {
       inventoryItemId: true,
       movementType: true,
       qtyBaseDelta: true,
       totalValuePaisa: true,
+      batchNo: true,
+      expiryDate: true,
       createdAt: true,
     },
   });
@@ -265,6 +277,56 @@ export async function getAllInventoryBalances(
       wacRateDecimal = formatScaledBigInt(divideRoundHalfUp(numerator, denominator), 4);
     }
 
+    // Compute FEFO (First-Expiry-First-Out) remaining batch layers
+    const inflowBatches: Array<{
+      batchNo: string;
+      expiryDate: Date | null;
+      remainingQtyBase: number;
+      createdAt: Date;
+    }> = [];
+    let totalOutflowQty = 0;
+
+    for (const row of rows) {
+      if (row.qtyBaseDelta > 0) {
+        inflowBatches.push({
+          batchNo: row.batchNo ?? 'GENERAL',
+          expiryDate: row.expiryDate,
+          remainingQtyBase: row.qtyBaseDelta,
+          createdAt: row.createdAt,
+        });
+      } else if (row.qtyBaseDelta < 0) {
+        totalOutflowQty += Math.abs(row.qtyBaseDelta);
+      }
+    }
+
+    // Sort inflows by earliest expiry date first (null expiry goes last), then createdAt
+    inflowBatches.sort((a, b) => {
+      if (a.expiryDate && b.expiryDate) {
+        return a.expiryDate.getTime() - b.expiryDate.getTime();
+      }
+      if (a.expiryDate && !b.expiryDate) return -1;
+      if (!a.expiryDate && b.expiryDate) return 1;
+      return a.createdAt.getTime() - b.createdAt.getTime();
+    });
+
+    let skipOutflow = totalOutflowQty;
+    const activeBatches: FefoBatchSummary[] = [];
+    for (const batch of inflowBatches) {
+      if (skipOutflow >= batch.remainingQtyBase) {
+        skipOutflow -= batch.remainingQtyBase;
+        continue;
+      }
+      const rem = batch.remainingQtyBase - skipOutflow;
+      skipOutflow = 0;
+      activeBatches.push({
+        batchNo: batch.batchNo,
+        expiryDate: batch.expiryDate ? batch.expiryDate.toISOString() : null,
+        remainingQtyBase: rem,
+        remainingDisplay: `${fromBaseUnits(rem, item.displayFactor)} ${item.displayUnit}`,
+        isEarliestExpiry: activeBatches.length === 0,
+      });
+    }
+
     return {
       inventoryItemId: item.id,
       skuCode: item.skuCode,
@@ -288,6 +350,7 @@ export async function getAllInventoryBalances(
       isLowStock: closingQtyBase <= item.reorderLevelBase,
       hsnCode: item.hsnCode,
       gstRateBps: item.gstRateBps,
+      fefoBatches: activeBatches,
     };
   });
 }

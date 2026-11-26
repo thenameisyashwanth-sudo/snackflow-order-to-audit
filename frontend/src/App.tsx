@@ -3,6 +3,9 @@ import AppShell from './components/AppShell';
 import { getHomePathForRole, NAV_ITEMS } from './config/navigation';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import LoginPage from './pages/LoginPage';
+import InventoryStockPage from './pages/InventoryStockPage';
+import ProductionRunsPage from './pages/ProductionRunsPage';
+import PurchasesPage from './pages/PurchasesPage';
 import { ForbiddenView, RoleModuleView } from './pages/RoleModuleView';
 
 function AppRoutes() {
@@ -32,19 +35,24 @@ function AppRoutes() {
       <Routes>
         <Route path="/login" element={<Navigate to={homePath} replace />} />
         <Route path="/" element={<Navigate to={homePath} replace />} />
-        {NAV_ITEMS.map((item) => (
-          <Route
-            key={item.id}
-            path={item.path}
-            element={
-              item.roles.includes(user.role) ? (
-                <RoleModuleView item={item} />
-              ) : (
-                <ForbiddenView />
-              )
-            }
-          />
-        ))}
+        {NAV_ITEMS.map((item) => {
+          let element = <RoleModuleView item={item} />;
+          if (item.id === 'production-runs') {
+            element = <ProductionRunsPage />;
+          } else if (item.id === 'purchases') {
+            element = <PurchasesPage />;
+          } else if (item.id === 'inventory') {
+            element = <InventoryStockPage />;
+          }
+
+          return (
+            <Route
+              key={item.id}
+              path={item.path}
+              element={item.roles.includes(user.role) ? element : <ForbiddenView />}
+            />
+          );
+        })}
         <Route path="*" element={<Navigate to={homePath} replace />} />
       </Routes>
     </AppShell>

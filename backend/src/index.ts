@@ -6,6 +6,10 @@ import { env } from './config/env.js';
 import { prisma } from './db/prisma.js';
 import adminRoutes from './routes/admin.routes.js';
 import authRoutes from './routes/auth.routes.js';
+import inventoryRoutes from './routes/inventory.routes.js';
+import mastersRoutes from './routes/masters.routes.js';
+import productionRoutes from './routes/production.routes.js';
+import purchasesRoutes from './routes/purchases.routes.js';
 import { ensureSeededOnBoot } from './seed/benchmark.js';
 
 export function createApp() {
@@ -44,6 +48,10 @@ export function createApp() {
 
   app.use('/api/auth', authRoutes);
   app.use('/api/admin', adminRoutes);
+  app.use('/api/masters', mastersRoutes);
+  app.use('/api/inventory', inventoryRoutes);
+  app.use('/api/purchases', purchasesRoutes);
+  app.use('/api/production-runs', productionRoutes);
 
   // Global error handler
   app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
